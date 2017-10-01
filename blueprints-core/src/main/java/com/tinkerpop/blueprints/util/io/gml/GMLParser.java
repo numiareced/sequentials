@@ -39,7 +39,7 @@ class GMLParser {
     private int edgeCount = 0;
 
     public GMLParser(final Graph graph, final String defaultEdgeLabel, final String vertexIdKey, final String edgeIdKey,
-                     final String edgeLabelKey, final String intentLabelKey) {
+                     final String edgeLabelKey, final String intentLabelKey, final String defaultIntentLabelKey) {
         this.graph = graph;
         this.vertexIdKey = vertexIdKey;
         this.edgeIdKey = edgeIdKey;

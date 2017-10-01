@@ -426,6 +426,7 @@ public class TinkerGraph implements IndexableGraph, KeyIndexableGraph, Serializa
                     this.remove(key, oldValue, element);
                 this.put(key, newValue, element);
             }
+
         }
 
         public void autoRemove(final String key, final Object oldValue, final T element) {

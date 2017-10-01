@@ -12,7 +12,7 @@ public class GMLTokens {
     public static final String GML = "gml";
     public static final String ID = "id";
     public static final String NAME = "name";
-    public static final String LABEL = "label";
+    public static final String LABEL = "Label";
     public static final String COMMENT = "comment";
     public static final String CREATOR = "Creator";
     public static final String VERSION = "Version";

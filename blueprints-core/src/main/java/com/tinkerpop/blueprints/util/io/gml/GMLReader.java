@@ -3,6 +3,7 @@ package com.tinkerpop.blueprints.util.io.gml;
 import com.tinkerpop.blueprints.Graph;
 import com.tinkerpop.blueprints.util.wrappers.batch.BatchGraph;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -11,6 +12,9 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StreamTokenizer;
 import java.nio.charset.Charset;
+
+import org.apache.commons.io.ByteOrderMark;
+import org.apache.commons.io.input.BOMInputStream;
 
 /**
  * A reader for the Graph Modelling Language (GML).
@@ -27,12 +31,16 @@ import java.nio.charset.Charset;
 public class GMLReader {
 
     public static final String DEFAULT_LABEL = "undefined";
+    
+    public static final String DEFAULT_INTENT = "undefined";
 
     private static final int DEFAULT_BUFFER_SIZE = 1000;
 
     private Graph graph;
 
     private final String defaultEdgeLabel;
+    
+    private final String defaultIntentLabel;
 
     private String vertexIdKey;
 
@@ -50,7 +58,7 @@ public class GMLReader {
      * @param graph the graph to load data into
      */
     public GMLReader(Graph graph) {
-        this(graph, DEFAULT_LABEL);
+        this(graph, DEFAULT_LABEL, DEFAULT_INTENT);
     }
 
     /**
@@ -59,9 +67,10 @@ public class GMLReader {
      * @param graph            the graph to load data into
      * @param defaultEdgeLabel the default edge label to be used if the GML edge does not define a label
      */
-    public GMLReader(Graph graph, String defaultEdgeLabel) {
+    public GMLReader(Graph graph, String defaultEdgeLabel, String defaultIntentLabel) {
         this.graph = graph;
         this.defaultEdgeLabel = defaultEdgeLabel;
+        this.defaultIntentLabel = defaultIntentLabel;
     }
 
     /**
@@ -95,7 +104,7 @@ public class GMLReader {
      */
     public void inputGraph(InputStream inputStream) throws IOException {
         GMLReader.inputGraph(this.graph, inputStream, DEFAULT_BUFFER_SIZE, this.defaultEdgeLabel,
-                this.vertexIdKey, this.edgeIdKey, this.edgeLabelKey);
+                this.vertexIdKey, this.edgeIdKey, this.edgeLabelKey, this.intentLabelKey, this.defaultIntentLabel);
     }
 
     /**
@@ -108,7 +117,7 @@ public class GMLReader {
      */
     public void inputGraph(String filename) throws IOException {
         GMLReader.inputGraph(this.graph, filename, DEFAULT_BUFFER_SIZE, this.defaultEdgeLabel,
-                this.vertexIdKey, this.edgeIdKey, this.edgeLabelKey);
+                this.vertexIdKey, this.edgeIdKey, this.edgeLabelKey, this.intentLabelKey, this.defaultIntentLabel);
     }
 
     /**
@@ -122,7 +131,7 @@ public class GMLReader {
      */
     public void inputGraph(InputStream inputStream, int bufferSize) throws IOException {
         GMLReader.inputGraph(this.graph, inputStream, bufferSize, this.defaultEdgeLabel,
-                this.vertexIdKey, this.edgeIdKey, this.edgeLabelKey, this.intentLabelKey);
+                this.vertexIdKey, this.edgeIdKey, this.edgeLabelKey, this.intentLabelKey, this.defaultIntentLabel);
     }
 
     /**
@@ -136,7 +145,7 @@ public class GMLReader {
      */
     public void inputGraph(String filename, int bufferSize) throws IOException {
         GMLReader.inputGraph(this.graph, filename, bufferSize, this.defaultEdgeLabel,
-                this.vertexIdKey, this.edgeIdKey, this.edgeLabelKey, this.intentLabelKey);
+                this.vertexIdKey, this.edgeIdKey, this.edgeLabelKey, this.intentLabelKey, this.defaultIntentLabel);
     }
 
     /**
@@ -147,7 +156,7 @@ public class GMLReader {
      * @throws IOException thrown if the data is not valid
      */
     public static void inputGraph(Graph graph, String filename) throws IOException {
-        inputGraph(graph, filename, DEFAULT_BUFFER_SIZE, DEFAULT_LABEL, GMLTokens.BLUEPRINTS_ID, GMLTokens.BLUEPRINTS_ID, null);
+        inputGraph(graph, filename, DEFAULT_BUFFER_SIZE, DEFAULT_LABEL, GMLTokens.BLUEPRINTS_ID, GMLTokens.BLUEPRINTS_ID, null, null, DEFAULT_INTENT);
     }
 
     /**
@@ -158,7 +167,7 @@ public class GMLReader {
      * @throws IOException thrown if the data is not valid
      */
     public static void inputGraph(Graph graph, InputStream inputStream) throws IOException {
-        inputGraph(graph, inputStream, DEFAULT_BUFFER_SIZE, DEFAULT_LABEL, GMLTokens.BLUEPRINTS_ID, GMLTokens.BLUEPRINTS_ID, null);
+        inputGraph(graph, inputStream, DEFAULT_BUFFER_SIZE, DEFAULT_LABEL, GMLTokens.BLUEPRINTS_ID, GMLTokens.BLUEPRINTS_ID, null, DEFAULT_INTENT);
     }
 
     /**
@@ -174,10 +183,10 @@ public class GMLReader {
      */
     public static void inputGraph(final Graph inputGraph, final String filename, final int bufferSize,
                                   final String defaultEdgeLabel, final String vertexIdKey, final String edgeIdKey,
-                                  final String edgeLabelKey) throws IOException {
+                                  final String edgeLabelKey, final String intentLabelKey, final String defaultIntentLabel) throws IOException {
         FileInputStream fis = new FileInputStream(filename);
         GMLReader.inputGraph(inputGraph, fis, bufferSize, defaultEdgeLabel,
-                vertexIdKey, edgeIdKey, edgeLabelKey);
+                vertexIdKey, edgeIdKey, edgeLabelKey, intentLabelKey, defaultIntentLabel);
         fis.close();
     }
 
@@ -194,10 +203,16 @@ public class GMLReader {
      */
     public static void inputGraph(final Graph inputGraph, final InputStream inputStream, final int bufferSize,
                                   final String defaultEdgeLabel, final String vertexIdKey, final String edgeIdKey,
-                                  final String edgeLabelKey, final String intentLabelKey) throws IOException {
+                                  final String edgeLabelKey, final String intentLabelKey, final String defaultIntentLabel) throws IOException {
         final BatchGraph graph = BatchGraph.wrap(inputGraph, bufferSize);
-
-        final Reader r = new BufferedReader(new InputStreamReader(inputStream, Charset.forName("ISO-8859-1")));
+        String defaultEncoding = "UTF-8";
+        
+        BOMInputStream bOMInputStream = new BOMInputStream(inputStream);
+        ByteOrderMark bom = bOMInputStream.getBOM();
+        String charsetName = bom == null ? defaultEncoding : bom.getCharsetName();
+        InputStreamReader reader = new InputStreamReader(new BufferedInputStream(bOMInputStream), charsetName);
+        final Reader r = new BufferedReader(reader);
+        //final Reader r = new BufferedReader(new InputStreamReader(inputStream, Charset.forName("UTF-8")));
         final StreamTokenizer st = new StreamTokenizer(r);
 
         try {
@@ -210,7 +225,7 @@ public class GMLReader {
                 st.wordChars(stringCharacters.charAt(i), stringCharacters.charAt(i));
             }
 
-            new GMLParser(graph, defaultEdgeLabel, vertexIdKey, edgeIdKey, edgeLabelKey, intentLabelKey).parse(st);
+            new GMLParser(graph, defaultEdgeLabel, vertexIdKey, edgeIdKey, edgeLabelKey, intentLabelKey, defaultIntentLabel).parse(st);
 
             graph.commit();
 

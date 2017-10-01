@@ -7,16 +7,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
 public class ParseRussian {
-	
-	static HashMap<Character, Integer> alphabet = new HashMap<Character, Integer>(); 
-	
-	
+
+	static boolean isSuperTypes = true;
+	static LinkedHashMap<Character, Integer> alphabet = new LinkedHashMap<Character, Integer>();
+	static HashMap<Integer, ArrayList<Character>> superTypes = new HashMap();
+
 	public static void readAlphabet(String filename) {
 		String line;
 		InputStream fis;
@@ -24,11 +27,11 @@ public class ParseRussian {
 			fis = new FileInputStream(filename);
 			InputStreamReader isr = new InputStreamReader(fis, Charset.forName("UTF-8"));
 			BufferedReader br = new BufferedReader(isr);
-			int i = 0; 
+			int i = 1;
 			while ((line = br.readLine()) != null) {
 				char rusChar = line.charAt(0);
 				alphabet.put(rusChar, i);
-				i ++; 
+				i++;
 			}
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -37,22 +40,80 @@ public class ParseRussian {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
-	
-	public static int getIntValue (char letter){
-		return alphabet.get(letter);
+
+		if (isSuperTypes) {
+			splitToSuperTypes();
+		}
 	}
 
-	public static char getCharValue (int num){
+	private static void splitToSuperTypes() {
+
+		ArrayList<Character> st1 = new ArrayList<Character>();
+		st1.add('à');
+		st1.add('á');
+		st1.add('â');
+		st1.add('ã');
+		st1.add('ä');
+
+		ArrayList<Character> st2 = new ArrayList<Character>();
+		st2.add('å');
+		st2.add('æ');
+		st2.add('ç');
+		st2.add('è');
+		st2.add('ê');
+
+		ArrayList<Character> st3 = new ArrayList<Character>();
+		st3.add('ì');
+		st3.add('ë');
+		st3.add('í');
+		st3.add('î');
+		st3.add('ï');
+
+		ArrayList<Character> st4 = new ArrayList<Character>();
+		st4.add('ð');
+		st4.add('ñ');
+		st4.add('ò');
+		st4.add('ó');
+		st4.add('ô');
+
+		ArrayList<Character> st5 = new ArrayList<Character>();
+		st5.add('õ');
+		st5.add('ö');
+		st5.add('÷');
+		st5.add('ø');
+		st5.add('ù');
+
+		superTypes.put(1, st1);
+		superTypes.put(2, st2);
+		superTypes.put(3, st3);
+		superTypes.put(4, st4);
+		superTypes.put(5, st5);
+	}
+
+	public static int getIntValue(char letter) {
+		if (!isSuperTypes) {
+			return alphabet.get(letter);
+		} else {
+			for (Map.Entry<Integer, ArrayList<Character>> entry : superTypes.entrySet()) {
+				if (entry.getValue().contains(letter)) {
+					return entry.getKey();
+				}
+
+			}
+		}
+		return -1;
+	}
+
+	public static char getCharValue(int num) {
 		return getKeyByValue(alphabet, num);
 	}
-	
+
 	public static <T, E> T getKeyByValue(Map<T, E> map, E value) {
-	    for (Entry<T, E> entry : map.entrySet()) {
-	        if (Objects.equals(value, entry.getValue())) {
-	            return entry.getKey();
-	        }
-	    }
-	    return null;
+		for (Entry<T, E> entry : map.entrySet()) {
+			if (Objects.equals(value, entry.getValue())) {
+				return entry.getKey();
+			}
+		}
+		return null;
 	}
 }
